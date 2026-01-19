@@ -4,7 +4,6 @@ import os
 from playwright.async_api import async_playwright, TimeoutError
 from database import Database
 
-# --- Helper Functions ---
 async def safe_text(locator):
     try:
         if await locator.count() > 0:
@@ -21,11 +20,10 @@ async def safe_attr(locator, attr):
         return None
     return None
 
-# --- Main Scraper ---
 async def scrape_amazon_async(query: str):
     print(f"--- Starting Amazon Scraper for: {query} ---")
 
-    # 1. FIX: Get absolute path to the key file
+    
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     CRED_PATH = os.path.join(BASE_DIR, "serviceAccountKey.json")
 
@@ -72,30 +70,22 @@ async def scrape_amazon_async(query: str):
             for i in range(limit):
                 product = products.nth(i)
 
-                # 1. Extract Title
                 title = await safe_text(product.locator("h2 span"))
                 
-                # 2. Extract Price
                 price = await safe_text(product.locator("span.a-price > span.a-offscreen"))
                 
-                # 3. Extract Rating
                 rating = await safe_text(product.locator("span.a-icon-alt"))
                 
-                # 4. Extract URL (Improved Logic)
                 relative_url = None
                 
-                # Priority A: Try the standard title link
                 relative_url = await safe_attr(product.locator("h2 a"), "href")
                 
-                # Priority B: If A fails, try the image link (usually points to same product)
                 if not relative_url:
                     relative_url = await safe_attr(product.locator(".s-product-image-container a"), "href")
 
-                # Priority C: Just grab the very first link in the card
                 if not relative_url:
                     relative_url = await safe_attr(product.locator("a"), "href")
 
-                # Build Full URL
                 full_url = None
                 if relative_url:
                     if relative_url.startswith("http"):
@@ -103,9 +93,7 @@ async def scrape_amazon_async(query: str):
                     else:
                         full_url = f"https://www.amazon.com{relative_url}"
 
-                # Save if we have at least a Title and Price
                 if title and price:
-                    # Insert into Firestore
                     db.insert((title, price, rating, "Amazon", full_url))
                     saved += 1
 
@@ -116,13 +104,11 @@ async def scrape_amazon_async(query: str):
 
         finally:
             await browser.close()
-            # 3. FIX: Close DB connection safely
             try:
                 db.close()
             except:
                 pass
 
-# 🔁 Sync wrapper (Streamlit-safe)
 def scrape_amazon(query: str):
     asyncio.run(scrape_amazon_async(query))
 
