@@ -1,0 +1,8 @@
+streamlit
+pandas
+altair
+firebase-admin
+playwright
+beautifulsoup4
+requests
+python-dotenv
